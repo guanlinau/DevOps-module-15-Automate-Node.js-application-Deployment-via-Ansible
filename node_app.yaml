@@ -1,0 +1,38 @@
+---
+- name: Install node and npm
+  hosts: aws_ec2_instance
+  become: True
+  become_user: root
+  tasks:
+    - name: Update yum repo and cache
+      yum:
+        name: "*"
+        state: latest
+    - name: Install nodejs and npm
+      yum:
+        name:
+          - nodejs
+          - npm
+
+- name: Deploy the nodejs app
+  hosts: aws_ec2_instance
+  tasks:
+    - name: Copy nodejs folder to a remote server
+      unarchive:
+        src: ./nodejs-app-1.0.0.tgz
+        dest: /home/ec2-user
+    - name: Install dependencies
+      npm:
+        path: /home/ec2-user/package
+    - name: Start the application
+      command:
+        chdir: /home/ec2-user/package/app
+        cmd: node server
+      async: 3600
+      poll: 0
+    - name: Ensure app is running
+      shell: ps aux | grep node
+      register: app_status
+    - name: Prints the running status message
+      debug:
+        msg: "{{app_status.stdout_lines}}"
